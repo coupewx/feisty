@@ -235,6 +235,7 @@ class _offline_driver(object):
 
     def _solve_foward_euler(self, nt):
         """use forward-euler to solve feisty model"""
+        APPLY_MINIMUM_BIOMASS = True # this could be defined elsewhere but I'm too lazy to do that and pass it to this function
         print(f'Integrating {nt} steps (starting at {time.strftime("%H:%M:%S")})')
         for n in range(nt):
             dsdt = self._compute_tendency(self._forcing_time[n])
@@ -242,6 +243,9 @@ class _offline_driver(object):
                 self.state_t[self.obj.prog_ndx_prognostic, :].data
                 + dsdt.data[self.obj.ndx_prognostic, :] * self.dt
             )
+            if APPLY_MINIMUM_BIOMASS: # COUPE ADDED MINIMUM BIOMASS - IF GREATER THAN TOLERANCE (TOL), FINE, OTHERWISE REPLACE WITH TOLERANCE (TOL)
+                tol = 1e-40 # arbitrary lower minimum biomass, underflow is like 1e-30
+                self.state_t.data[self.obj.prog_ndx_prognostic, :]=np.where(self.state_t.data[self.obj.prog_ndx_prognostic,:]>tol, self.state_t.data[self.obj.prog_ndx_prognostic,:], tol)
             self._post_data(n)
 
     def _solve_scipy(self, nt, method):
